@@ -21,7 +21,7 @@ add_library(cmf src/protocol.cpp src/device.cpp)
 target_include_directories(cmf PUBLIC src)
 target_compile_options(cmf PRIVATE -Wall -Wextra)
 
-add_executable(buddy src/main.cpp)
+add_executable(buddy src/main.cpp src/logo.cpp)
 target_link_libraries(buddy PRIVATE cmf ftxui::screen ftxui::dom ftxui::component)
 target_compile_options(buddy PRIVATE -Wall -Wextra)
 

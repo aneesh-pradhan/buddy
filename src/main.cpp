@@ -5,6 +5,7 @@
 // the UI thread with ScreenInteractive::Post.
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstdlib>
 #include <deque>
@@ -19,6 +20,7 @@
 #include <ftxui/dom/elements.hpp>
 
 #include "device.hpp"
+#include "logo.hpp"
 #include "protocol.hpp"
 
 using namespace ftxui;
@@ -278,6 +280,8 @@ int main(int argc, char** argv) {
 
   auto controls = Container::Vertical({mode_box, bass_box, level_menu});
 
+  using Clock = std::chrono::steady_clock;
+  const auto started = Clock::now();
   auto view = Renderer(controls, [&] {
     Elements header;
     if (connected) {
@@ -295,7 +299,12 @@ int main(int argc, char** argv) {
     }
     if (!status.empty()) header.push_back(paragraph(status) | color(connected ? Color(Color::Red) : Color(Color::Default)));
 
-    Elements body = {vbox(header), separatorEmpty()};
+    const double seconds = std::chrono::duration<double>(Clock::now() - started).count();
+    header.insert(header.begin(), buddy::wordmark());
+    Elements body = {
+        hbox(buddy::dial(buddy::dial_angle(seconds)), text("   "), vbox(header) | vcenter),
+        separatorEmpty(),
+    };
     if (connected) {
       body.push_back(window(text(" Noise control ") | bold, mode_box->Render()));
       body.push_back(window(text(" Ultra Bass ") | bold,
@@ -303,8 +312,7 @@ int main(int argc, char** argv) {
                                  hbox(text("Level  "), level_menu->Render()))));
     }
     return vbox({
-               text("CMF Buds Pro 2") | bold | center,
-               separator(),
+               separatorEmpty(),
                vbox(body) | size(WIDTH, EQUAL, 60) | center,
                filler(),
                separator(),
@@ -313,6 +321,7 @@ int main(int argc, char** argv) {
   });
 
   auto app = CatchEvent(view, [&](const Event& event) {
+    if (event == Event::Custom) return false;  // redraw ticks and posted updates
     if (event == Event::Character('q') || event == Event::Escape) {
       screen.Exit();
       return true;
@@ -327,6 +336,14 @@ int main(int argc, char** argv) {
     }
     // ignore input aimed at controls until device state is known
     return !connected && !event.is_mouse();
+  });
+
+  // drives the dial animation
+  std::jthread ticker([&screen](std::stop_token stop) {
+    while (!stop.stop_requested()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(80));
+      screen.PostEvent(Event::Custom);
+    }
   });
 
   worker.post(reconnect);
