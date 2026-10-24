@@ -20,8 +20,7 @@ constexpr double kPi = std::numbers::pi;
 constexpr int kDialSize = 16;  // pixels across
 constexpr int kRidges = 24;    // knurls around the rim
 
-constexpr double kIdleSpeed = 0.7;    // rad/s
-constexpr double kBoostSpeed = 16.0;  // extra rad/s at launch
+constexpr double kBoostSpeed = 16.0;  // rad/s at launch
 constexpr double kBoostDecay = 0.9;   // s
 
 Color mix(std::array<uint8_t, 3> a, std::array<uint8_t, 3> b, double t) {
@@ -68,10 +67,10 @@ constexpr std::array<std::string_view, 7> kY = {
 }  // namespace
 
 double dial_angle(double seconds) {
-  return kIdleSpeed * seconds + kBoostSpeed * kBoostDecay * (1 - std::exp(-seconds / kBoostDecay));
+  return kBoostSpeed * kBoostDecay * (1 - std::exp(-seconds / kBoostDecay));
 }
 
-Element dial(double angle) {
+Element dial(double angle, bool pressed) {
   Pixels px(kDialSize, std::vector<Pixel>(kDialSize));
   const double half = kDialSize / 2.0;
   // indicator dot riding near the edge of the face
@@ -94,7 +93,7 @@ Element dial(double angle) {
         px[y][x] = Color::RGB(0xf5, 0xf5, 0xf0);
       } else {
         // orange face lit from the top left
-        const double light = 0.5 + 0.6 * (-u - v) / 2;
+        const double light = (pressed ? 0.2 : 0.5) + 0.6 * (-u - v) / 2;
         px[y][x] = mix({0xc2, 0x40, 0x0c}, {0xff, 0x8a, 0x3d}, light);
       }
     }

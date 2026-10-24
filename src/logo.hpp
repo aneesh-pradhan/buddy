@@ -9,12 +9,13 @@
 
 namespace buddy {
 
-// Dial rotation in radians `seconds` after launch: a fast spin that eases off
-// into a slow idle turn.
+// Dial rotation in radians `seconds` after launch: a fast spin that eases to a
+// stop, leaving the dial for the user to turn.
 double dial_angle(double seconds);
 
-// The dial at the given rotation.
-ftxui::Element dial(double angle);
+// The dial at the given rotation (clockwise in radians); `pressed` shades the
+// face as if pushed in.
+ftxui::Element dial(double angle, bool pressed = false);
 
 // "BUDDY" in a 5x7 pixel font, drawn in the terminal's foreground color.
 ftxui::Element wordmark();
