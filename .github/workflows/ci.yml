@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC 14 / libstdc++
+            packages: g++-14 ninja-build
+            compiler: g++-14
+            preset: default
+          # g++-14 supplies libstdc++ 14 headers. Clang selects the newest
+          # installed GCC, and Ubuntu's libgcc-14 runtime is not enough on its own.
+          - name: Clang 19 / libstdc++
+            packages: clang-19 g++-14 ninja-build
+            compiler: clang++-19
+            preset: default
+          - name: Clang 20 / libc++
+            packages: clang-20 libc++-20-dev libc++abi-20-dev libunwind-20-dev ninja-build
+            compiler: clang++-20
+            preset: libc++
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install compiler and Ninja
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.packages }}
+
+      # Ubuntu 24.04 ships CMake 3.28, which cannot enable C++26 for GCC.
+      - name: Install CMake 3.30.9
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cmake.tgz" \
+            https://github.com/Kitware/CMake/releases/download/v3.30.9/cmake-3.30.9-linux-x86_64.tar.gz
+          mkdir -p "$RUNNER_TEMP/cmake"
+          tar -C "$RUNNER_TEMP/cmake" --strip-components=1 -xzf "$RUNNER_TEMP/cmake.tgz"
+          echo "$RUNNER_TEMP/cmake/bin" >> "$GITHUB_PATH"
+
+      - name: Configure, build, and test
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          cmake --preset ${{ matrix.preset }}
+          cmake --build --preset ${{ matrix.preset }}
+          ctest --preset ${{ matrix.preset }}
